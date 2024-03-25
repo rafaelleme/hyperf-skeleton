@@ -1,0 +1,54 @@
+version: '3.9'
+
+services:
+  redis:
+    container_name: 'hyperf-redis'
+    image: redis:6.2.6-alpine
+    ports:
+      - '6381:6379'
+
+  postgres:
+    image: postgres:latest
+    container_name: 'hyperf-postgres'
+    restart: always
+    environment:
+      POSTGRES_USER: 'admin'
+      POSTGRES_PASSWORD: 'abcd12'
+      POSTGRES_DB: 'hyperf'
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  
+  composer:
+    image: composer:latest
+    container_name: 'hyperf-composer'
+    volumes:
+      - ./:/opt/www
+    working_dir: /opt/www
+    entrypoint: composer
+    command: install --dev --ignore-platform-reqs
+    restart: "no"
+
+  app:
+    container_name: 'hyperf-service'
+    working_dir: /opt/www
+    tty: true
+    build:
+      context: ./
+      dockerfile: docker/Dockerfile
+      target: dev
+    volumes:
+      - ./:/opt/www
+    ports:
+      - '9501:9501'
+    env_file:
+      - ./.env
+    links:
+      - redis
+      - postgres
+    depends_on:
+      - composer
+
+volumes:
+  pgdata:
